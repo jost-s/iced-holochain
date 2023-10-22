@@ -1,0 +1,31 @@
+[package]
+edition = "2021"
+name = "iced-holochain"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+holochain = "=0.3.0-beta-dev.22"
+holochain_client = {path = "../../../holochain/holochain-client-rust"}
+# holochain_client = "0.4"
+get-port = "4"
+iced = {version = "0.10.0", features = ["tokio"]}
+sodoken = "0.0.9"
+# once_cell = "1.18.0"
+# serde = {version = "1.0", features = ["derive"]}
+# serde_json = "1.0"
+
+# [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# async-std = "1.0"
+# directories-next = "2.0"
+
+# [target.'cfg(target_arch = "wasm32")'.dependencies]
+# wasm-timer = "0.2"
+# web-sys = {version = "0.3", features = ["Window", "Storage"]}
+
+# [package.metadata.deb]
+# assets = [
+#   ["target/release-opt/todos", "usr/bin/iced-todos", "755"],
+#   ["iced-todos.desktop", "usr/share/applications/", "644"],
+# ]
