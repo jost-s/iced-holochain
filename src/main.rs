@@ -1,6 +1,6 @@
 use holochain::start_happ;
 use iced::{
-    widget::{button, column, text, Space},
+    widget::{column, text, Space},
     Application, Color, Command, Length, Settings, Theme,
 };
 use iced_holochain::happ::Happ;
@@ -18,7 +18,6 @@ struct State {
 
 #[derive(Clone, Debug)]
 enum Message {
-    ButtonPressed,
     HappStarted(Happ),
     Error(Error),
 }
@@ -38,10 +37,10 @@ impl Application for State {
         (
             State {
                 happ: None,
-                holochain_starting: false,
+                holochain_starting: true,
                 error: String::new(),
             },
-            Command::none(),
+            Command::perform(start_happ(), |message| message),
         )
     }
 
@@ -51,10 +50,6 @@ impl Application for State {
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
-            Message::ButtonPressed => {
-                self.holochain_starting = true;
-                Command::perform(start_happ(), |message| message)
-            }
             Message::HappStarted(admin_ws) => {
                 println!("admin ws connected");
                 self.happ = Some(admin_ws);
@@ -83,7 +78,6 @@ impl Application for State {
         };
         let error_text = self.error.clone();
         column![
-            button("batn").padding(10).on_press(Message::ButtonPressed),
             text(format!("{}", holochain_starting_text)),
             text(format!("{}", btn_text)),
             Space::new(Length::Fill, Length::Fill),
