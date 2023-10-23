@@ -1,20 +1,17 @@
-use std::sync::Arc;
-
-use holochain::spawn_app;
-use holochain_client::AdminWebsocket;
+use holochain::start_happ;
 use iced::{
     widget::{button, column, text, Space},
     Application, Color, Command, Length, Settings, Theme,
 };
+use iced_holochain::happ::Happ;
 
 fn main() -> iced::Result {
-    Happ::run(Settings {
+    State::run(Settings {
         ..Settings::default()
     })
 }
-
-struct Happ {
-    admin_ws: Option<Arc<AdminWebsocket>>,
+struct State {
+    happ: Option<Happ>,
     holochain_starting: bool,
     error: String,
 }
@@ -22,7 +19,7 @@ struct Happ {
 #[derive(Clone, Debug)]
 enum Message {
     ButtonPressed,
-    AdminWsConnected(Arc<AdminWebsocket>),
+    HappStarted(Happ),
     Error(Error),
 }
 
@@ -31,7 +28,7 @@ enum Error {
     HolochainError(String),
 }
 
-impl Application for Happ {
+impl Application for State {
     type Message = Message;
     type Executor = iced::executor::Default;
     type Flags = ();
@@ -39,8 +36,8 @@ impl Application for Happ {
 
     fn new(_: Self::Flags) -> (Self, Command<Message>) {
         (
-            Happ {
-                admin_ws: None,
+            State {
+                happ: None,
                 holochain_starting: false,
                 error: String::new(),
             },
@@ -49,18 +46,18 @@ impl Application for Happ {
     }
 
     fn title(&self) -> String {
-        "Gherkin".to_string()
+        "Holochain on iced".to_string()
     }
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
             Message::ButtonPressed => {
                 self.holochain_starting = true;
-                Command::perform(spawn_app(), |message| message)
+                Command::perform(start_happ(), |message| message)
             }
-            Message::AdminWsConnected(admin_ws) => {
+            Message::HappStarted(admin_ws) => {
                 println!("admin ws connected");
-                self.admin_ws = Some(admin_ws);
+                self.happ = Some(admin_ws);
                 self.holochain_starting = false;
                 Command::none()
             }
@@ -79,7 +76,7 @@ impl Application for Happ {
         } else {
             "Holochain is not starting"
         };
-        let btn_text = if self.admin_ws.is_some() {
+        let btn_text = if self.happ.is_some() {
             "connected"
         } else {
             "not connected"
@@ -102,12 +99,14 @@ impl Application for Happ {
 
 mod holochain {
     use crate::{Error, Message};
-    use iced_holochain::spawn_holochain_app;
+    use iced_holochain::happ::start_holochain_app;
 
-    pub(crate) async fn spawn_app() -> Message {
-        match spawn_holochain_app().await {
+    /// Spawn a Holochain conductor, install app and connect websockets to make
+    /// requests to app.
+    pub(crate) async fn start_happ() -> Message {
+        match start_holochain_app().await {
             Err(err) => Message::Error(Error::HolochainError(err)),
-            Ok(admin_ws) => Message::AdminWsConnected(admin_ws),
+            Ok(admin_ws) => Message::HappStarted(admin_ws),
         }
     }
 }
