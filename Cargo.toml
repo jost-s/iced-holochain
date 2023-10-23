@@ -3,14 +3,18 @@ edition = "2021"
 name = "iced-holochain"
 version = "0.1.0"
 
+[workspace]
+members = ["happ/zomes/integrity/*"]
+resolver = "2"
+
 [lib]
 crate-type = ["lib"]
 
 [dependencies]
 holochain = "=0.3.0-beta-dev.22"
 # holochain_client = {path = "../../../holochain/holochain-client-rust"}
-holochain_client = "0.5.0-dev.0"
 get-port = "4"
+holochain_client = "0.5.0-dev.0"
 iced = {version = "0.10", features = ["tokio"]}
 sodoken = "0.0.9"
 tempfile = "3"

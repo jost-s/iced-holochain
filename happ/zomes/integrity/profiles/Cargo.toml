@@ -1,0 +1,13 @@
+[package]
+edition = "2021"
+name = "profiles_integrity"
+version = "0.1.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+hc_zome_profiles_integrity = "0.2.0"
+hdi = "0.4.0-beta-dev.13"
+
+getrandom = {version = "0.2", features = ["js"]}
