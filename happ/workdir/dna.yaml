@@ -4,16 +4,16 @@ name: holomess
 integrity:
   network_seed: ~
   properties: ~
-  origin_time: ~
+  origin_time: 2023-10-23T00:00:00.000Z
   zomes:
     - name: profiles_integrity
       hash: ~
-      bundled: "../../../target/wasm32-unknown-unknown/release/profiles_integrity.wasm"
+      bundled: "../../target/wasm32-unknown-unknown/release/profiles_integrity.wasm"
       dependencies: ~
-coordinator:
-  zomes:
-    - name: profiles
-      hash: ~
-      bundled: "../../../target/wasm32-unknown-unknown/release/profiles.wasm"
-      dependencies:
-        - name: profiles_integrity
+# coordinator:
+#   zomes:
+#     - name: profiles
+#       hash: ~
+#       bundled: "../../../target/wasm32-unknown-unknown/release/profiles.wasm"
+#       dependencies:
+#         - name: profiles_integrity
