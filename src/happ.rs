@@ -1,4 +1,4 @@
-use std::{fmt::Debug, sync::Arc};
+use std::{collections::HashMap, fmt::Debug, path::Path, sync::Arc};
 
 use get_port::Ops;
 use holochain::{
@@ -8,12 +8,15 @@ use holochain::{
         paths::DatabaseRootPath,
         Conductor, ConductorBuilder,
     },
-    prelude::kitsune_p2p::dependencies::{
-        kitsune_p2p_types::config::{KitsuneP2pConfig, TransportConfig},
-        url2::url2,
+    prelude::{
+        kitsune_p2p::dependencies::{
+            kitsune_p2p_types::config::{KitsuneP2pConfig, TransportConfig},
+            url2::url2,
+        },
+        AppBundleSource,
     },
 };
-use holochain_client::AdminWebsocket;
+use holochain_client::{AdminWebsocket, InstallAppPayload};
 
 #[derive(Clone)]
 pub struct Happ {
@@ -34,18 +37,17 @@ pub async fn start_holochain_app() -> Result<Happ, String> {
     conductor_config.keystore = KeystoreConfig::LairServerInProc {
         lair_root: Some(temp_dir.path().join("lair/")),
     };
-    let admin_port = if let Some(port) = get_port::tcp::TcpPort::in_range(
+    let admin_port = get_port::tcp::TcpPort::in_range(
         "127.0.0.1",
         get_port::Range {
             min: 55000,
             max: 56000,
         },
-    ) {
-        port
-    } else {
+    )
+    .ok_or_else(|| {
         eprintln!("couldn't get a free port for admin interface");
-        return Err("couldn't get a free port for admin interface".to_string());
-    };
+        "couldn't get a free port for admin interface".to_string()
+    })?;
     let admin_interface_config = AdminInterfaceConfig {
         driver: InterfaceDriver::Websocket { port: admin_port },
     };
@@ -61,38 +63,53 @@ pub async fn start_holochain_app() -> Result<Happ, String> {
 
     println!("temp dir {:?}", temp_dir.into_path());
 
-    match ConductorBuilder::new()
+    let conductor = ConductorBuilder::new()
         .config(conductor_config)
         .passphrase(Some(vec_to_locked("pass".as_bytes().to_owned()).unwrap()))
         .build()
         .await
-    {
-        Err(err) => {
+        .map_err(|err| {
             eprintln!("building conductor failed {:#?}", err);
-            Err(format!("building conductor failed {:#?}", err))
-        }
-        Ok(conductor) => {
-            println!("conductor built: config {:?}", conductor.config);
-            if let Some(admin_port) = conductor.get_arbitrary_admin_websocket_port() {
-                match AdminWebsocket::connect(format!("ws://127.0.0.1:{}", admin_port)).await {
-                    Ok(admin_ws) => {
-                        println!("admin web soccket connected");
-                        let happ = Happ {
-                            conductor,
-                            admin_ws: Arc::new(admin_ws),
-                        };
-                        Ok(happ)
-                    }
-                    Err(err) => {
-                        eprintln!("failed to connect admin web socket {:?}", err);
-                        Err(format!("failed to connect admin web socket {:?}", err))
-                    }
-                }
-            } else {
-                Err("could not get admin port".to_string())
-            }
-        }
-    }
+            format!("building conductor failed {:#?}", err)
+        })?;
+    println!("conductor built: config {:?}", conductor.config);
+    let admin_port = conductor
+        .get_arbitrary_admin_websocket_port()
+        .ok_or_else(|| "could not get admin port".to_string())?;
+    let mut admin_ws = AdminWebsocket::connect(format!("ws://127.0.0.1:{}", admin_port))
+        .await
+        .map_err(|err| {
+            eprintln!("failed to connect admin web socket {:?}", err);
+            format!("failed to connect admin web socket {:?}", err)
+        })?;
+    println!("admin web soccket connected");
+
+    let agent_key = admin_ws.generate_agent_pub_key().await.map_err(|err| {
+        eprintln!("error generating an agent pub key: {:?}", err);
+        format!("error generating an agent pub key")
+    })?;
+    println!("generated agent pub key {:?}", agent_key);
+    let install_app_payload = InstallAppPayload {
+        source: AppBundleSource::Path(Path::new("happ/workdir/holomess.happ").to_path_buf()),
+        agent_key,
+        installed_app_id: None,
+        membrane_proofs: HashMap::new(),
+        network_seed: None,
+    };
+    let app_info = admin_ws
+        .install_app(install_app_payload)
+        .await
+        .map_err(|err| {
+            eprintln!("error installing app: {:?}", err);
+            format!("error installing app")
+        })?;
+    println!("app installed {:?}", app_info);
+
+    let happ = Happ {
+        conductor,
+        admin_ws: Arc::new(admin_ws),
+    };
+    Ok(happ)
 }
 
 fn vec_to_locked(mut pass_tmp: Vec<u8>) -> std::io::Result<sodoken::BufRead> {

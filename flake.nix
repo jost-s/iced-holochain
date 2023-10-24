@@ -19,7 +19,7 @@
             inputsFrom = [ holonix.devShells.${system}.holochainBinaries ];
             packages = with pkgs; [
               # add further packages from nixpkgs
-              nodejs
+              # nodejs
             ];
           };
         };

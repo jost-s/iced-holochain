@@ -4,17 +4,25 @@ name = "iced-holochain"
 version = "0.1.0"
 
 [workspace]
-members = ["happ/zomes/integrity/*"]
+members = ["happ/zomes/integrity/holomess", "happ/zomes/integrity/profiles"]
 resolver = "2"
+
+[workspace.dependencies]
+getrandom = {version = "0.2", features = ["custom"]}
+# hdi = "=0.3.2"
+hdi = "=0.4.0-beta-dev.13"
+hdk = "=0.3.0-beta-dev.17"
 
 [lib]
 crate-type = ["lib"]
 
 [dependencies]
+# holochain = "=0.2.2"
 holochain = "=0.3.0-beta-dev.22"
 # holochain_client = {path = "../../../holochain/holochain-client-rust"}
 get-port = "4"
 holochain_client = "0.5.0-dev.0"
+# holochain_client = "=0.4"
 iced = {version = "0.10", features = ["tokio"]}
 sodoken = "0.0.9"
 tempfile = "3"

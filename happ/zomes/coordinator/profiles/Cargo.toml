@@ -1,0 +1,10 @@
+[package]
+edition = "2021"
+name = "profiles"
+version = "0.1.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+hc_zome_profiles_coordinator = "0.2.0"

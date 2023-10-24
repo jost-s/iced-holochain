@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-name = "profiles_integrity"
+name = "holomess_integrity"
 version = "0.1.0"
 
 [lib]
@@ -8,4 +8,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 getrandom = {workspace = true}
-hc_zome_profiles_integrity = "0.2.0"
+hdi = {workspace = true}

@@ -51,7 +51,6 @@ impl Application for State {
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
             Message::HappStarted(admin_ws) => {
-                println!("admin ws connected");
                 self.happ = Some(admin_ws);
                 self.holochain_starting = false;
                 Command::none()
