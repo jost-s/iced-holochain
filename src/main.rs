@@ -91,15 +91,14 @@ impl Application for State {
 }
 
 mod holochain {
-    use crate::{Error, Message};
-    use iced_holochain::happ::start_holochain_app;
+    use crate::{Error, Happ, Message};
 
     /// Spawn a Holochain conductor, install app and connect websockets to make
-    /// requests to app.
+    /// requests to conductor.
     pub(crate) async fn start_happ() -> Message {
-        match start_holochain_app().await {
-            Err(err) => Message::Error(Error::HolochainError(err)),
+        match Happ::start_holochain_app().await {
             Ok(admin_ws) => Message::HappStarted(admin_ws),
+            Err(err) => Message::Error(Error::HolochainError(err)),
         }
     }
 }
