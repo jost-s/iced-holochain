@@ -5,32 +5,40 @@ version = "0.1.0"
 
 [workspace]
 members = [
-  "happ/zomes/integrity/holomess",
   "happ/zomes/integrity/profiles",
+  "happ/zomes/integrity/holomess",
   "happ/zomes/coordinator/profiles",
+  "happ/zomes/coordinator/holomess",
 ]
 resolver = "2"
 
 [workspace.dependencies]
-getrandom = {version = "0.2", features = ["custom"]}
+getrandom = { version = "0.2", features = ["custom"] }
 hc_zome_profiles_integrity = "0.2"
 hdi = "0.3"
 hdk = "0.2"
+holochain = { version = "0.2", default-features = false, features = [
+  "test_utils",
+] }
+holomess_integrity = { path = "happ/zomes/integrity/holomess" }
+serde = ">=1.0,<=1.0.166"
+tokio = "1.35"
 
 [lib]
 crate-type = ["lib"]
 
 [dependencies]
-hc_zome_profiles_integrity = {workspace = true}
-hdk = {workspace = true}
-holochain = "0.2"
 get-port = "4"
+hc_zome_profiles_integrity = { workspace = true }
+hdk = { workspace = true }
+holochain = { workspace = true }
 holochain_client = "0.4"
 holochain_state = "0.2"
-iced = {version = "0.10", features = ["tokio"]}
+holomess_integrity = { workspace = true }
+iced = { version = "0.10", features = ["tokio"] }
 lair_keystore_api = "0.3.0"
-serde = ">=1.0,<=1.0.166"
+serde = { workspace = true }
 serde_yaml = "0.9"
 sodoken = "0.0.9"
 tempfile = "3"
-tokio = "1.35"
+tokio = { workspace = true }

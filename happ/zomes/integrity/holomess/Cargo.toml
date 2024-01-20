@@ -4,8 +4,9 @@ name = "holomess_integrity"
 version = "0.1.0"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-getrandom = {workspace = true}
-hdi = {workspace = true}
+getrandom = { workspace = true }
+hdi = { workspace = true }
+serde = { workspace = true }

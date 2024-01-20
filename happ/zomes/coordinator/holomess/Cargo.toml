@@ -1,0 +1,15 @@
+[package]
+edition = "2021"
+name = "holomess"
+version = "0.1.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+hdk = { workspace = true }
+holomess_integrity = { workspace = true }
+
+[dev-dependencies]
+holochain = { workspace = true }
+tokio = { workspace = true }

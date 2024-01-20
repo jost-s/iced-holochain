@@ -6,13 +6,13 @@ integrity:
   properties: ~
   origin_time: 2023-10-23T00:00:00.000Z
   zomes:
-    # - name: holomess_integrity
-    #   hash: ~
-    #   bundled: "../target/wasm32-unknown-unknown/release/holomess_integrity.wasm"
-    #   dependencies: ~
     - name: profiles_integrity
       hash: ~
       bundled: "../../target/wasm32-unknown-unknown/release/profiles_integrity.wasm"
+      dependencies: ~
+    - name: holomess_integrity
+      hash: ~
+      bundled: "../../target/wasm32-unknown-unknown/release/holomess_integrity.wasm"
       dependencies: ~
 coordinator:
   zomes:
@@ -21,3 +21,8 @@ coordinator:
       bundled: "../../target/wasm32-unknown-unknown/release/profiles.wasm"
       dependencies:
         - name: profiles_integrity
+    - name: holomess
+      hash: ~
+      bundled: "../../target/wasm32-unknown-unknown/release/holomess.wasm"
+      dependencies:
+        - name: holomess_integrity
