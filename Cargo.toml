@@ -3,6 +3,9 @@ edition = "2021"
 name = "iced-holochain"
 version = "0.1.0"
 
+[lib]
+crate-type = ["lib"]
+
 [workspace]
 members = [
   "happ/zomes/integrity/profiles",
@@ -24,9 +27,6 @@ holomess_integrity = { path = "happ/zomes/integrity/holomess" }
 serde = ">=1.0,<=1.0.166"
 tokio = "1.35"
 
-[lib]
-crate-type = ["lib"]
-
 [dependencies]
 get-port = "4"
 hc_zome_profiles_integrity = { workspace = true }
@@ -34,9 +34,11 @@ hdk = { workspace = true }
 holochain = { workspace = true }
 holochain_client = "0.4"
 holochain_state = "0.2"
+holochain_trace = "0.2"
 holomess_integrity = { workspace = true }
 iced = { version = "0.10", features = ["tokio"] }
 lair_keystore_api = "0.3.0"
+once_cell = "1.19"
 serde = { workspace = true }
 serde_yaml = "0.9"
 sodoken = "0.0.9"

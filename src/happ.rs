@@ -7,7 +7,7 @@ use std::{
 
 use get_port::Ops;
 use hc_zome_profiles_integrity::Profile;
-use hdk::prelude::{CellId, ExternIO, FunctionName, Record, Timestamp, ZomeName};
+use hdk::prelude::{ActionHash, CellId, ExternIO, FunctionName, Record, Timestamp, ZomeName};
 use holochain::{
     conductor::{
         api::CellInfo,
@@ -23,6 +23,7 @@ use holochain::{
 };
 use holochain_client::{AdminWebsocket, AgentPubKey, AppWebsocket, InstallAppPayload, ZomeCall};
 use holochain_state::nonce::fresh_nonce;
+use holomess_integrity::HoloMess;
 use serde::{de::DeserializeOwned, Serialize};
 
 const CONDUCTOR_CONFIG_FILE: &str = "conductor-config.yaml";
@@ -95,6 +96,7 @@ impl Happ {
             conductor_config
         };
 
+        holochain_trace::test_run().ok();
         let conductor = ConductorBuilder::default()
             .config(conductor_config.clone())
             .passphrase(Some(vec_to_locked("pass".as_bytes().to_owned()).unwrap()))
@@ -221,7 +223,7 @@ impl Happ {
         Ok(profile)
     }
 
-    pub async fn fetch_profile(&self, agent_key: AgentPubKey) -> Result<Profile, String> {
+    pub async fn fetch_profile(&self, agent_key: AgentPubKey) -> Result<Option<Profile>, String> {
         let result: Option<Record> = self
             .call_zome(
                 self.cell_id.agent_pubkey().clone(),
@@ -234,10 +236,30 @@ impl Happ {
 
         if let Some(record) = result {
             let profile = Profile::try_from(record)?;
-            Ok(profile)
+            Ok(Some(profile))
         } else {
-            Err("no profile found".to_string())
+            Ok(None)
         }
+    }
+
+    pub async fn create_message(&self, message: String) -> Result<ActionHash, String> {
+        self.call_zome(
+            self.cell_id.agent_pubkey().clone(),
+            "holomess".into(),
+            "create_message".into(),
+            message,
+        )
+        .await
+    }
+
+    pub async fn fetch_messages(&self) -> Result<Vec<HoloMess>, String> {
+        self.call_zome(
+            self.cell_id.agent_pubkey().clone(),
+            "holomess".into(),
+            "get_messages".into(),
+            (),
+        )
+        .await
     }
 
     async fn call_zome<T, P>(

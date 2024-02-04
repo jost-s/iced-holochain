@@ -1,14 +1,19 @@
-use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 use hc_zome_profiles_integrity::Profile;
+use hdk::prelude::ActionHash;
 use holochain::start_happ;
+use holomess_integrity::HoloMess;
 use iced::{
-    widget::{column, text, TextInput},
+    widget::{column, row, text, text_input, Space, TextInput},
     Application, Color, Command, Length, Settings, Theme,
 };
 use iced_holochain::happ::Happ;
+use once_cell::sync::Lazy;
 
-use crate::holochain::{create_profile, fetch_profile};
+use crate::holochain::{create_message, create_profile, fetch_messages, fetch_profile};
+
+static INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[derive(Clone)]
 enum Flags {
@@ -42,25 +47,30 @@ enum Holomess {
     Failed(String),
 }
 
-enum Loading {
-    FetchingProfile,
-    None,
-}
-
 struct State {
     happ: Arc<Happ>,
+    error_message: Option<String>,
     nickname: String,
-    loading: Loading,
     profile: Option<Profile>,
+    loading_profile: bool,
+    loading_messages: bool,
+    saving_message: bool,
+    current_message: String,
+    holo_messes: Vec<HoloMess>,
 }
 
 impl State {
     pub fn new(happ: Arc<Happ>) -> Self {
         State {
+            happ,
+            error_message: None,
             nickname: String::new(),
             profile: None,
-            loading: Loading::None,
-            happ,
+            loading_profile: false,
+            loading_messages: false,
+            saving_message: false,
+            current_message: String::new(),
+            holo_messes: Vec::new(),
         }
     }
 }
@@ -69,9 +79,13 @@ impl State {
 enum Message {
     HappStarted(Result<Happ, String>),
     NicknameChanged(String),
-    ProfileFetched(Result<Profile, String>),
+    ProfileFetched(Result<Option<Profile>, String>),
     CreateProfile,
     ProfileCreated(Result<Profile, String>),
+    HoloMessChanged(String),
+    CreateHoloMess,
+    HoloMessCreated(Result<ActionHash, String>),
+    HoloMessesFetched(Result<Vec<HoloMess>, String>),
 }
 
 impl Application for Holomess {
@@ -103,7 +117,7 @@ impl Application for Holomess {
                         println!("happ started; fetching profile...");
                         let happ = Arc::new(happ);
                         let mut state = State::new(happ.clone());
-                        state.loading = Loading::FetchingProfile;
+                        state.loading_profile = true;
                         *self = Holomess::Running(state);
                         Command::perform(fetch_profile(happ), Message::ProfileFetched)
                     }
@@ -118,19 +132,59 @@ impl Application for Holomess {
             }
             Holomess::Running(state) => {
                 let command = match message {
-                    Message::ProfileFetched(Ok(profile)) => {
-                        println!("profile fetched is {profile:?}");
-                        state.profile = Some(profile);
-                        state.loading = Loading::None;
-                        Command::none()
+                    Message::ProfileFetched(Ok(maybe_profile)) => {
+                        state.loading_profile = false;
+                        state.profile = maybe_profile;
+                        if let Some(profile) = &state.profile {
+                            println!("profile fetched is {profile:?}");
+                            let _ = text_input::focus::<Message>(INPUT_ID.clone());
+                            state.loading_messages = true;
+                            Command::perform(
+                                fetch_messages(state.happ.clone()),
+                                Message::HoloMessesFetched,
+                            )
+                        } else {
+                            println!("no profile found, need to create one");
+                            Command::none()
+                        }
                     }
                     Message::ProfileFetched(Err(err)) => {
+                        state.loading_profile = false;
                         eprintln!("oh shit, profile couldn't be fetched: {err}");
-                        state.loading = Loading::None;
+                        state.error_message =
+                            Some(format!("oh shit, profile couldn't be fetched: {err}"));
                         Command::none()
                     }
                     Message::NicknameChanged(nickname) => {
                         state.nickname = nickname;
+                        Command::none()
+                    }
+                    Message::HoloMessChanged(message) => {
+                        state.current_message = message;
+                        Command::none()
+                    }
+                    Message::CreateHoloMess => {
+                        println!("creating new mess {:?}", state.current_message);
+                        state.saving_message = true;
+                        Command::perform(
+                            create_message(state.happ.clone(), state.current_message.clone()),
+                            Message::HoloMessCreated,
+                        )
+                    }
+                    Message::HoloMessCreated(Ok(mess)) => {
+                        state.saving_message = false;
+                        println!("created a new mess {mess:?}, fetching all messes");
+                        state.current_message = "".to_string();
+
+                        state.loading_messages = true;
+                        Command::perform(
+                            fetch_messages(state.happ.clone()),
+                            Message::HoloMessesFetched,
+                        )
+                    }
+                    Message::HoloMessCreated(Err(err)) => {
+                        state.saving_message = false;
+                        state.error_message = Some(err);
                         Command::none()
                     }
                     Message::CreateProfile => {
@@ -143,10 +197,25 @@ impl Application for Holomess {
                     Message::ProfileCreated(Ok(profile)) => {
                         println!("profile created: {profile:?}");
                         state.profile = Some(profile);
+                        println!("another output");
                         Command::none()
                     }
                     Message::ProfileCreated(Err(err)) => {
                         eprintln!("oh shit, this is heavy: {err}");
+                        state.error_message =
+                            Some(format!("oh shit, profile couldn't be created: {err}"));
+                        Command::none()
+                    }
+                    Message::HoloMessesFetched(Ok(holo_messes)) => {
+                        state.loading_messages = false;
+                        println!("holomesses fetched; there are {:?}", holo_messes.len());
+                        state.holo_messes = holo_messes;
+                        Command::none()
+                    }
+                    Message::HoloMessesFetched(Err(err)) => {
+                        state.loading_messages = false;
+                        state.error_message =
+                            Some(format!("oh shit, holo_messes couldn't be fetched: {err}"));
                         Command::none()
                     }
                     _ => Command::none(),
@@ -161,14 +230,15 @@ impl Application for Holomess {
     }
 
     fn view(&self) -> iced::Element<'_, Self::Message> {
-        let content = match self {
-            Holomess::Starting => column![text("starting up holomess...")],
+        let header = match self {
+            Holomess::Starting => column![text("Starting up holomess...")],
             Holomess::Running(state) => {
-                if let Loading::FetchingProfile = &state.loading {
+                if state.loading_profile {
                     column![text("Fetching profile...")]
                 } else {
                     if let Some(profile) = &state.profile {
-                        column![text(format!("Welcome back, {}", &profile.nickname))]
+                        println!("found profile, showing welcome");
+                        column![text(format!("Welcome back, {}", &profile.nickname)),]
                     } else {
                         let input = TextInput::new("Enter your nickname", &state.nickname)
                             .padding(10)
@@ -183,18 +253,72 @@ impl Application for Holomess {
                 text(err).style(Color::new(1.0, 0.0, 0.0, 1.0))
             ],
         };
-        content
-            .width(Length::Fill)
-            .align_items(iced::Alignment::Center)
-            .padding(20)
-            .spacing(20)
-            .into()
+
+        let mut mess_input = row![];
+        if let Holomess::Running(state) = self {
+            if state.profile.is_some() {
+                let mut text_input = TextInput::new("Write a new message", &state.current_message)
+                    .padding(10)
+                    .on_submit(Message::CreateHoloMess)
+                    .id(INPUT_ID.clone());
+                if !state.saving_message {
+                    text_input = text_input.on_input(Message::HoloMessChanged);
+                }
+                mess_input = mess_input.push(text_input);
+            }
+        }
+
+        let (holo_messes, error) = match self {
+            Holomess::Running(state) => {
+                if state.profile.is_some() {
+                    // Messages header
+                    let mut messes = column![text("Messes:")];
+
+                    if state.loading_messages {
+                        messes = messes.push("Loading messages...");
+                    } else {
+                        for holo_mess in state.holo_messes.iter() {
+                            let mess_row = row![text(holo_mess.text.clone())];
+                            messes = messes.push(mess_row);
+                        }
+                    }
+                    let error = if let Some(error_message) = &state.error_message {
+                        column![
+                            text("A big bad error happened"),
+                            text(error_message)
+                                .style(iced::theme::Text::Color(Color::from_rgb(1.0, 0.0, 0.0)))
+                        ]
+                    } else {
+                        column![]
+                    };
+                    (messes, error)
+                } else {
+                    (column![], column![])
+                }
+            }
+            _ => (column![], column![]),
+        };
+
+        column![
+            header,
+            mess_input,
+            holo_messes,
+            Space::with_height(Length::Fill),
+            error
+        ]
+        .width(Length::Fill)
+        // .align_items(iced::Alignment::Center)
+        .padding(20)
+        .spacing(20)
+        .into()
     }
 }
 
 mod holochain {
     use crate::Happ;
     use hc_zome_profiles_integrity::Profile;
+    use hdk::prelude::ActionHash;
+    use holomess_integrity::HoloMess;
     use std::{path::PathBuf, sync::Arc};
 
     /// Spawn a Holochain conductor, install app and connect websockets to make
@@ -203,7 +327,7 @@ mod holochain {
         Happ::start_holochain_app(path).await
     }
 
-    pub(crate) async fn fetch_profile(happ: Arc<Happ>) -> Result<Profile, String> {
+    pub(crate) async fn fetch_profile(happ: Arc<Happ>) -> Result<Option<Profile>, String> {
         happ.fetch_profile(happ.cell_id.agent_pubkey().clone())
             .await
     }
@@ -213,5 +337,17 @@ mod holochain {
         nickname: String,
     ) -> Result<Profile, String> {
         happ.create_profile(nickname).await
+    }
+
+    pub(crate) async fn create_message(
+        happ: Arc<Happ>,
+        message: String,
+    ) -> Result<ActionHash, String> {
+        happ.create_message(message).await
+    }
+
+    pub(crate) async fn fetch_messages(happ: Arc<Happ>) -> Result<Vec<HoloMess>, String> {
+        println!("fetching holo_messes...");
+        happ.fetch_messages().await
     }
 }
