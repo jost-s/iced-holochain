@@ -1,10 +1,3 @@
-use std::{
-    collections::{BTreeMap, HashMap},
-    fmt::Debug,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
-
 use get_port::Ops;
 use hc_zome_profiles_integrity::Profile;
 use hdk::prelude::{ActionHash, CellId, ExternIO, FunctionName, Record, Timestamp, ZomeName};
@@ -25,6 +18,12 @@ use holochain_client::{AdminWebsocket, AgentPubKey, AppWebsocket, InstallAppPayl
 use holochain_state::nonce::fresh_nonce;
 use holomess_integrity::HoloMess;
 use serde::{de::DeserializeOwned, Serialize};
+use std::{
+    collections::{BTreeMap, HashMap},
+    fmt::Debug,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 const CONDUCTOR_CONFIG_FILE: &str = "conductor-config.yaml";
 
@@ -136,7 +135,7 @@ impl Happ {
                 agent_key: agent_key.clone(),
                 installed_app_id: None,
                 membrane_proofs: HashMap::new(),
-                network_seed: None,
+                network_seed: Some("0".to_string()),
             };
             let app_info = admin_ws
                 .install_app(install_app_payload)

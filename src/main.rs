@@ -1,12 +1,13 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use hc_zome_profiles_integrity::Profile;
 use hdk::prelude::ActionHash;
 use holochain::start_happ;
 use holomess_integrity::HoloMess;
 use iced::{
+    futures::SinkExt,
     widget::{column, row, text, text_input, Space, TextInput},
-    Application, Color, Command, Length, Settings, Theme,
+    Application, Color, Command, Length, Settings, Subscription, Theme,
 };
 use iced_holochain::happ::Happ;
 use once_cell::sync::Lazy;
@@ -137,7 +138,8 @@ impl Application for Holomess {
                         state.profile = maybe_profile;
                         if let Some(profile) = &state.profile {
                             println!("profile fetched is {profile:?}");
-                            let _ = text_input::focus::<Message>(INPUT_ID.clone());
+                            let d = text_input::focus::<Message>(INPUT_ID.clone());
+                            println!("d {d:?}");
                             state.loading_messages = true;
                             Command::perform(
                                 fetch_messages(state.happ.clone()),
@@ -229,6 +231,30 @@ impl Application for Holomess {
         }
     }
 
+    fn subscription(&self) -> iced::Subscription<Self::Message> {
+        if let Holomess::Running(state) = self {
+            if state.profile.is_some() {
+                let happ = state.happ.clone();
+
+                iced::subscription::channel(0u8, 100, |mut sender| async move {
+                    loop {
+                        let messages = fetch_messages(happ.clone()).await;
+                        if let Err(err) = messages {
+                            eprintln!("polling: could not fetch messages - {err}");
+                        } else {
+                            let _ = sender.send(Message::HoloMessesFetched(messages)).await;
+                        }
+                        tokio::time::sleep(Duration::from_secs(1)).await;
+                    }
+                })
+            } else {
+                Subscription::none()
+            }
+        } else {
+            Subscription::none()
+        }
+    }
+
     fn view(&self) -> iced::Element<'_, Self::Message> {
         let header = match self {
             Holomess::Starting => column![text("Starting up holomess...")],
@@ -237,7 +263,6 @@ impl Application for Holomess {
                     column![text("Fetching profile...")]
                 } else {
                     if let Some(profile) = &state.profile {
-                        println!("found profile, showing welcome");
                         column![text(format!("Welcome back, {}", &profile.nickname)),]
                     } else {
                         let input = TextInput::new("Enter your nickname", &state.nickname)
@@ -347,7 +372,6 @@ mod holochain {
     }
 
     pub(crate) async fn fetch_messages(happ: Arc<Happ>) -> Result<Vec<HoloMess>, String> {
-        println!("fetching holo_messes...");
         happ.fetch_messages().await
     }
 }
