@@ -3,9 +3,6 @@ edition = "2021"
 name = "iced-holochain"
 version = "0.1.0"
 
-[lib]
-crate-type = ["lib"]
-
 [workspace]
 members = [
   "happ/zomes/integrity/profiles",
