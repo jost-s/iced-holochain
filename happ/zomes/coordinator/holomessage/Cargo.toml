@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-name = "holomess"
+name = "holomessage"
 version = "0.1.0"
 
 [lib]
@@ -8,7 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 hdk = { workspace = true }
-holomess_integrity = { workspace = true }
+holomessage_integrity = { workspace = true }
 
 [dev-dependencies]
 holochain = { workspace = true }

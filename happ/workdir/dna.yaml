@@ -1,6 +1,6 @@
 ---
 manifest_version: "1"
-name: holomess
+name: holomessage
 integrity:
   network_seed: ~
   properties: ~
@@ -10,9 +10,9 @@ integrity:
       hash: ~
       bundled: "../../target/wasm32-unknown-unknown/release/profiles_integrity.wasm"
       dependencies: ~
-    - name: holomess_integrity
+    - name: holomessage_integrity
       hash: ~
-      bundled: "../../target/wasm32-unknown-unknown/release/holomess_integrity.wasm"
+      bundled: "../../target/wasm32-unknown-unknown/release/holomessage_integrity.wasm"
       dependencies: ~
 coordinator:
   zomes:
@@ -21,8 +21,8 @@ coordinator:
       bundled: "../../target/wasm32-unknown-unknown/release/profiles.wasm"
       dependencies:
         - name: profiles_integrity
-    - name: holomess
+    - name: holomessage
       hash: ~
-      bundled: "../../target/wasm32-unknown-unknown/release/holomess.wasm"
+      bundled: "../../target/wasm32-unknown-unknown/release/holomessage.wasm"
       dependencies:
-        - name: holomess_integrity
+        - name: holomessage_integrity

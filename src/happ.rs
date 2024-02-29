@@ -16,7 +16,7 @@ use holochain::{
 };
 use holochain_client::{AdminWebsocket, AgentPubKey, AppWebsocket, InstallAppPayload, ZomeCall};
 use holochain_state::nonce::fresh_nonce;
-use holomess_integrity::HoloMess;
+use holomessage_integrity::HoloMessage;
 use serde::{de::DeserializeOwned, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
@@ -130,7 +130,7 @@ impl Happ {
 
             let install_app_payload = InstallAppPayload {
                 source: AppBundleSource::Path(
-                    Path::new("happ/workdir/holomess.happ").to_path_buf(),
+                    Path::new("happ/workdir/holomessage.happ").to_path_buf(),
                 ),
                 agent_key: agent_key.clone(),
                 installed_app_id: None,
@@ -168,7 +168,9 @@ impl Happ {
             app.cell_info
         };
 
-        let cells = cell_info.get("holomess").ok_or_else(|| "cell not found")?;
+        let cells = cell_info
+            .get("holomessage")
+            .ok_or_else(|| "cell not found")?;
         let cell_id = if let CellInfo::Provisioned(p) = &cells[0] {
             p.cell_id.clone()
         } else {
@@ -244,21 +246,28 @@ impl Happ {
     pub async fn create_message(&self, message: String) -> Result<ActionHash, String> {
         self.call_zome(
             self.cell_id.agent_pubkey().clone(),
-            "holomess".into(),
+            "holomessage".into(),
             "create_message".into(),
             message,
         )
         .await
     }
 
-    pub async fn fetch_messages(&self) -> Result<Vec<HoloMess>, String> {
+    pub async fn fetch_messages(&self) -> Result<Vec<HoloMessage>, String> {
         self.call_zome(
             self.cell_id.agent_pubkey().clone(),
-            "holomess".into(),
+            "holomessage".into(),
             "get_messages".into(),
             (),
         )
         .await
+        .map(|records: Vec<Record>| {
+            records
+                .into_iter()
+                .map(TryFrom::try_from)
+                .flatten()
+                .collect()
+        })
     }
 
     async fn call_zome<T, P>(
@@ -319,6 +328,7 @@ fn vec_to_locked(mut pass_tmp: Vec<u8>) -> std::io::Result<sodoken::BufRead> {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use crate::happ::Happ;
     use std::env::temp_dir;
@@ -335,25 +345,4 @@ mod tests {
             .await
             .unwrap();
     }
-
-    // #[tokio::test(flavor = "multi_thread")]
-    // async fn holochain_restartable() {
-    //     let mut path = temp_dir().to_path_buf();
-    //     path.push("some_dir");
-    //     println!("path {:?}", path);
-    //     {
-    //         let mut happ = Happ::start_holochain_app(path).await.unwrap();
-    //         let installed_apps = (*happ.admin_ws.clone()).list_apps(None).await.unwrap();
-    //         println!("instlaled {installed_apps:?}");
-    //         // .await
-    //         // .unwrap();
-    //     }
-
-    //     // let happ = Happ::start_holochain_app(path).await.unwrap();
-    //     // (*happ.app_ws)
-    //     //     .clone()
-    //     //     .app_info("some_id".to_string())
-    //     //     .await
-    //     //     .unwrap();
-    // }
 }
