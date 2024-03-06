@@ -1,6 +1,6 @@
 # HoloMessages
 
-A simple messaging Holochain application based on iced, as an example of a Rust GUI hApp.
+A simple messaging Holochain application based on [iced](https://github.com/iced-rs/iced) - a Rust GUI library - as an example of a Rust GUI hApp.
 
 ## Running the application
 
