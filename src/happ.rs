@@ -135,7 +135,7 @@ impl Happ {
                 agent_key: agent_key.clone(),
                 installed_app_id: None,
                 membrane_proofs: HashMap::new(),
-                network_seed: Some("0".to_string()),
+                network_seed: None,
             };
             let app_info = admin_ws
                 .install_app(install_app_payload)
